@@ -528,16 +528,12 @@
 
     setLoading(true);
     try {
-      // NOTE: ngrok's free tier serves an interstitial "you are about to visit"
-      // HTML page to browser requests, which would break this fetch. The
-      // ngrok-skip-browser-warning header bypasses it. It is ignored by every
-      // other host (Cloudflare Tunnel, localhost, etc.), so it is always safe.
-      // Do NOT set Content-Type here — the browser must set the multipart
-      // boundary for FormData itself.
+      // NOTE: Do NOT add custom headers here (e.g. ngrok-skip-browser-warning).
+      // POST + FormData is a CORS "simple request" and skips the OPTIONS preflight.
+      // Adding ANY custom header forces a preflight, which ngrok free tier blocks.
       const res = await fetch(API_BASE + "/analyze", {
         method: "POST",
         body: fd,
-        headers: { "ngrok-skip-browser-warning": "true" },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Analysis failed.");
