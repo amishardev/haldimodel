@@ -105,33 +105,53 @@ stands.
 
 ---
 
-## How to calibrate later (improves accuracy when data exists)
+## How calibration works (two-point, seeded with real ground truth)
 
 The estimator sits behind one clean function,
 `estimate_purity(reaction_strength)` in [`app/estimator.py`](app/estimator.py).
-Feed it real samples with lab-known curcumin content and it switches from the
-heuristic to a fitted linear map automatically — **no code changes, no retraining
-of the app.**
+Calibration points map `reaction_strength` DIRECTLY to a known `purity_%`
+(0-100) — `purity = slope·reaction_strength + intercept`, fitted with
+`numpy.polyfit` (degree 1). **No code changes, no retraining of the app.**
+
+On first run, `calibration_data.json` is auto-seeded (see
+`config.SEED_CALIBRATION_POINTS`) with two real measured points:
+
+```
+(reaction_strength=0.3816, known_purity=50)   — a 50%-adulterated reference
+(reaction_strength=0.6418, known_purity=100)  — a pure/premium reference
+```
+
+giving `slope ≈ 192.2, intercept ≈ -23.3`. An existing calibration file is
+**never** overwritten by seeding.
 
 ```bash
-# add calibration points: the reaction_strength your sample produced + lab-known %
+# add more calibration points as you measure real samples
 curl -X POST http://127.0.0.1:8000/calibrate \
   -H "Content-Type: application/json" \
-  -d '{"reaction_strength": 0.01, "known_curcumin_percent": 0.2}'
-
-curl -X POST http://127.0.0.1:8000/calibrate \
-  -H "Content-Type: application/json" \
-  -d '{"reaction_strength": 0.53, "known_curcumin_percent": 8.0}'
+  -d '{"reaction_strength": 0.50, "known_purity_percent": 72.5}'
 
 # inspect current calibration state
 curl http://127.0.0.1:8000/calibrate
 ```
 
-Once **≥ 2 points** exist, the app fits
-`curcumin_% = slope·reaction_strength + intercept` (`numpy.polyfit`, degree 1)
-and uses that instead of `REACTION_REF`. Points are stored in
-`calibration_data.json`. (`yellow_value` / `S_value` are accepted as legacy
-aliases for `reaction_strength`.)
+The UI shows whether a result is **"calibrated (N points)"** or the
+**"uncalibrated heuristic"** fallback (`REACTION_REF`, only used if fewer
+than 2 valid points exist). A calibration fit with a non-positive slope is
+automatically rejected (it would make purity *fall* as the reaction gets
+*stronger*) and the app falls back to the heuristic instead. `yellow_value` /
+`S_value` are accepted as legacy aliases for `reaction_strength`;
+`known_curcumin_percent` is accepted as a legacy alias for
+`known_purity_percent`.
+
+### Startup self-tests
+
+Every app start runs pure-math sanity checks (no images, no network) and
+prints `PASS`/`FAIL` for each — this is the regression guard for the exact
+bug class described below. Run them standalone any time:
+
+```bash
+python -m app.selftest
+```
 
 **Plugging in a trained model later:** `estimator.py` has a clearly marked
 `TODO(model)` block showing exactly where a fitted scikit-learn regressor drops
@@ -165,7 +185,7 @@ block and `app/gemma.py`.
 |--------|--------------|----------------------------------------------------------------|
 | GET    | `/`          | Serve the single-page frontend.                                |
 | POST   | `/analyze`   | multipart: `before_image`, `after_image`, optional ROI fields. |
-| POST   | `/calibrate` | Add `(reaction_strength, known_curcumin_percent)` point(s).    |
+| POST   | `/calibrate` | Add `(reaction_strength, known_purity_percent)` point(s).      |
 | GET    | `/calibrate` | Current calibration status.                                    |
 | GET    | `/health`    | Liveness probe.                                                |
 
@@ -175,10 +195,15 @@ block and `app/gemma.py`.
 {
   "comparable": true,
   "warning": null,
-  "purity_index": 96.3,
+  "purity_index": 100.0,
+  "purity_display": "100%",
   "band": "Premium-range",
-  "reaction_strength": 0.53,
-  "reaction_delta": -0.53,
+  "confidence": "Medium",
+  "low_confidence": false,
+  "calibration_mode": "calibrated",
+  "calibration_mode_label": "calibrated (2 points)",
+  "reaction_strength": 0.6418,
+  "reaction_delta": 0.6418,
   "before_yellow": 0.349,
   "white_diff": 0.0,
   "white_tolerance": 0.08,
@@ -187,7 +212,20 @@ block and `app/gemma.py`.
   "saturation_note": null,
   "gemma_note": null,
   "disclaimer": "Indicative / relative estimate for screening only. Not a certified lab measurement.",
-  "debug": { "mode": "heuristic", "estimated_curcumin_percent": null, "reaction_strength": 0.53, "before": {"sample_rgb": []}, "after": {}, "white_before": [], "white_after": [], "...": "norms, absorbances, after_darkness, purity_index" }
+  "debug": { "mode": "calibrated", "calibration_points_used": 2, "calibration_fit": {"slope": 192.16, "intercept": -23.33}, "reaction_strength_mean": 0.6418, "purity_index_math": 100.0, "confidence_breakdown": {}, "before": {"sample_rgb": []}, "after": {}, "white_before": [], "white_after": [], "...": "norms, absorbances, after_darkness" }
+}
+```
+
+A saturated (near-black) or protocol-violating read returns a clear message
+instead of a bare number — `purity_index` is `null`, never `0`:
+
+```json
+{
+  "sample_ok": false,
+  "saturated": true,
+  "warning": "Reading saturated — the sample/reaction is too dark to measure reliably. Retake with a thinner, more dilute liquid layer.",
+  "purity_index": null,
+  "purity_display": null
 }
 ```
 
@@ -229,6 +267,24 @@ For a comparable, meaningful read, shoot **both** photos the same way:
 * A **thin, consistent liquid layer** (same vial, same fill depth) so thickness
   doesn't change the colour.
 * The vial/liquid filling a small central ROI; steady, no reflections/glare.
+
+## Reliability: bulletproof pipeline, never a silent 0
+
+Every numeric step (white-normalisation, `-log10`, absorbance) is guarded with
+`isfinite`/`nan_to_num` checks that log loudly and clamp to a safe bound rather
+than let a degenerate input (empty ROI, pure-black patch, corrupt pixels)
+silently become `0`. A calibration fit with a non-positive slope is rejected
+(it would make purity *fall* as the reaction gets *stronger* — the one
+invariant the whole app depends on) and the app falls back to the heuristic
+instead. The `/analyze` pipeline is wrapped in try/except: any unexpected
+failure returns a structured `{"error": true, "detail": "..."}` response, never
+an unexplained crash or a fake number.
+
+A genuinely saturated (near-black) AFTER photo is **blocked** with a clear
+"retake, too dark" message — `purity_index` is `null`, not `0`. This matters
+in the API/JSON sense specifically: `null` and `0` are different values, and a
+client must not conflate them (in JavaScript, `Number(null) === 0` — check for
+`typeof x === "number"` first, as `app/static/index.html` now does).
 
 ## Known limitations
 

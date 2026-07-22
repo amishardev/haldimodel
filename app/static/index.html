@@ -18,6 +18,13 @@
       position: absolute; border: 2px solid var(--ink);
       background: rgba(17,17,16,0.10); pointer-events: none;
     }
+    /* What the app actually measured, drawn back onto the thumbnails */
+    .sample-box { position:absolute; border:2px solid #e11d48; background:rgba(225,29,72,.10);
+                  pointer-events:none; border-radius:3px; }
+    .paper-box  { position:absolute; border:2px dashed #2563eb; background:rgba(37,99,235,.08);
+                  pointer-events:none; border-radius:3px; }
+    .box-tag { position:absolute; top:-9px; left:-1px; font-size:9px; font-weight:700;
+               letter-spacing:.04em; padding:1px 5px; border-radius:999px; color:#fff; }
     .preview-wrap { position: relative; touch-action: none; }
     .preview-wrap img { display: block; width: 100%; border-radius: 1rem; }
     .drop-active { border-color: var(--ink) !important; background: #fff; }
@@ -39,11 +46,34 @@
       <h1 class="text-5xl sm:text-6xl font-bold tracking-tight leading-[0.95]">
         Curcumin Purity,<br />Instantly.
       </h1>
-      <p class="mt-5 text-lg text-[color:var(--muted)] max-w-md leading-snug">
-        Upload two photos of your turmeric extract — one before and one after
-        adding NAVDHI REAGENT get an indicative purity score in seconds.
+      <p class="mt-5 text-lg text-[color:var(--muted)] max-w-lg leading-snug">
+        Photograph the <strong class="text-[color:var(--ink)]">thin clear liquid</strong>
+        of your turmeric extract — once before and once after adding the reagent.
+        Follow the protocol below or the reading will not be accurate.
       </p>
     </header>
+
+    <!-- PROTOCOL — the single biggest factor in getting a usable reading -->
+    <div class="bg-white rounded-2xl ring-1 ring-black/5 p-5 mb-6">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-lg">🧪</span>
+        <h2 class="font-bold">Sample protocol — read this first</h2>
+      </div>
+      <ol class="text-sm text-[color:var(--muted)] space-y-2 list-decimal list-inside leading-snug">
+        <li>Mix turmeric in <strong class="text-[color:var(--ink)]">isopropyl alcohol</strong>, let it settle <strong class="text-[color:var(--ink)]">5 min</strong>.</li>
+        <li>Take the <strong class="text-[color:var(--ink)]">CLEAR coloured liquid from the top</strong> — leave the powder behind.</li>
+        <li>Put a <strong class="text-[color:var(--ink)]">thin, even layer</strong> of this liquid (ideally in a small clear glass) on/over white paper.</li>
+        <li><strong class="text-[color:var(--ink)]">Photo 1</strong> = liquid only.</li>
+        <li>Add <strong class="text-[color:var(--ink)]">1 drop FeCl₃</strong>, mix, then <strong class="text-[color:var(--ink)]">Photo 2</strong>.</li>
+      </ol>
+      <div class="mt-3 bg-rose-50 ring-1 ring-rose-200 text-rose-800 rounded-xl p-3 text-sm">
+        <strong>Do NOT photograph the wet paste or solid blob</strong> — it saturates the reading and pure samples will read the same as adulterated ones.
+      </div>
+      <p class="mt-3 text-xs text-[color:var(--muted)]">
+        Same white background, same light, same distance, and
+        <strong class="text-[color:var(--ink)]">locked phone exposure</strong> for both photos.
+      </p>
+    </div>
 
     <!-- Upload zones -->
     <div class="grid sm:grid-cols-2 gap-4 mb-4">
@@ -64,7 +94,7 @@
           <div data-role="before-preview" class="preview-wrap hidden"></div>
         </label>
         <div class="flex items-center justify-between mt-2 px-1">
-          <p class="text-[11px] text-[color:var(--muted)]">Drag on the image to mark the vial · skip = centre crop</p>
+          <p class="text-[11px] text-[color:var(--muted)]">Thin clear liquid only — no paste. Drag to crop the liquid · skip = auto-detect</p>
           <button data-role="before-reset" class="hidden text-[11px] font-semibold underline">Reset</button>
         </div>
       </div>
@@ -86,7 +116,7 @@
           <div data-role="after-preview" class="preview-wrap hidden"></div>
         </label>
         <div class="flex items-center justify-between mt-2 px-1">
-          <p class="text-[11px] text-[color:var(--muted)]">Drag on the image to mark the vial · skip = centre crop</p>
+          <p class="text-[11px] text-[color:var(--muted)]">Thin clear liquid only — no paste. Drag to crop the liquid · skip = auto-detect</p>
           <button data-role="after-reset" class="hidden text-[11px] font-semibold underline">Reset</button>
         </div>
       </div>
@@ -96,9 +126,64 @@
     <div class="bg-white rounded-2xl ring-1 ring-black/5 px-5 py-4 mb-4 flex items-center justify-between">
       <div>
         <div class="font-bold">White reference — required</div>
-        <div class="text-sm text-[color:var(--muted)]">Shoot BOTH photos on the same white paper/background, same light &amp; distance. Mismatched whites → no score.</div>
+        <div class="text-sm text-[color:var(--muted)]">Keep white paper in frame. Same background, light, distance &amp; locked exposure for BOTH photos — mismatched whites → no score.</div>
       </div>
       <span class="text-xs font-semibold tracking-wide text-[color:var(--muted)] uppercase">Auto</span>
+    </div>
+
+    <!-- Consistency mode: repeat the SAME sample to expose protocol noise -->
+    <div class="bg-white rounded-2xl ring-1 ring-black/5 px-5 py-4 mb-4">
+      <div class="flex items-center justify-between">
+        <div class="pr-3">
+          <div class="font-bold">Consistency mode</div>
+          <div class="text-sm text-[color:var(--muted)]">Photograph the SAME sample 2–3 times. Shows how much your readings wobble.</div>
+        </div>
+        <button id="consistency-toggle" type="button"
+          class="flex-none text-xs font-bold uppercase tracking-wide px-3 py-2 rounded-full ring-1 ring-black/10">Off</button>
+      </div>
+
+      <div id="consistency-zones" class="hidden mt-4 space-y-4">
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <p class="text-[11px] font-semibold tracking-[0.15em] text-[color:var(--muted)] uppercase mb-2">Repeat 2 · Before</p>
+            <label id="before2-drop" class="zone block bg-white/70 border-2 border-dashed border-[#d6d3cb] rounded-2xl p-4 text-center cursor-pointer">
+              <input type="file" accept="image/*" class="hidden" data-role="before2-input" />
+              <div data-role="before2-placeholder" class="text-sm text-[color:var(--muted)] py-3">Tap to add</div>
+              <div data-role="before2-preview" class="preview-wrap hidden"></div>
+            </label>
+            <button data-role="before2-reset" class="hidden text-[11px] font-semibold underline mt-1">Reset</button>
+          </div>
+          <div>
+            <p class="text-[11px] font-semibold tracking-[0.15em] text-[color:var(--muted)] uppercase mb-2">Repeat 2 · After</p>
+            <label id="after2-drop" class="zone block bg-white/70 border-2 border-dashed border-[#d6d3cb] rounded-2xl p-4 text-center cursor-pointer">
+              <input type="file" accept="image/*" class="hidden" data-role="after2-input" />
+              <div data-role="after2-placeholder" class="text-sm text-[color:var(--muted)] py-3">Tap to add</div>
+              <div data-role="after2-preview" class="preview-wrap hidden"></div>
+            </label>
+            <button data-role="after2-reset" class="hidden text-[11px] font-semibold underline mt-1">Reset</button>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <p class="text-[11px] font-semibold tracking-[0.15em] text-[color:var(--muted)] uppercase mb-2">Repeat 3 · Before <span class="normal-case tracking-normal">(optional)</span></p>
+            <label id="before3-drop" class="zone block bg-white/70 border-2 border-dashed border-[#d6d3cb] rounded-2xl p-4 text-center cursor-pointer">
+              <input type="file" accept="image/*" class="hidden" data-role="before3-input" />
+              <div data-role="before3-placeholder" class="text-sm text-[color:var(--muted)] py-3">Tap to add</div>
+              <div data-role="before3-preview" class="preview-wrap hidden"></div>
+            </label>
+            <button data-role="before3-reset" class="hidden text-[11px] font-semibold underline mt-1">Reset</button>
+          </div>
+          <div>
+            <p class="text-[11px] font-semibold tracking-[0.15em] text-[color:var(--muted)] uppercase mb-2">Repeat 3 · After <span class="normal-case tracking-normal">(optional)</span></p>
+            <label id="after3-drop" class="zone block bg-white/70 border-2 border-dashed border-[#d6d3cb] rounded-2xl p-4 text-center cursor-pointer">
+              <input type="file" accept="image/*" class="hidden" data-role="after3-input" />
+              <div data-role="after3-placeholder" class="text-sm text-[color:var(--muted)] py-3">Tap to add</div>
+              <div data-role="after3-preview" class="preview-wrap hidden"></div>
+            </label>
+            <button data-role="after3-reset" class="hidden text-[11px] font-semibold underline mt-1">Reset</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Analyse button -->
@@ -118,6 +203,60 @@
     <!-- Result card -->
     <section id="result" class="hidden bg-white rounded-3xl shadow-sm ring-1 ring-black/5 p-6 mt-6">
       <h2 class="text-lg font-bold mb-4">Result</h2>
+
+      <!-- Confidence badge + what was measured -->
+      <div id="confidence-row" class="hidden mb-4 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span id="confidence-badge" class="text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full">—</span>
+          <span class="text-xs text-[color:var(--muted)]">confidence</span>
+        </div>
+        <span id="scene-source" class="text-[11px] text-[color:var(--muted)] uppercase tracking-wide"></span>
+      </div>
+
+      <!-- Low confidence: no hard number, tell them what to fix -->
+      <div id="low-confidence" class="hidden mb-4 flex gap-3 items-start bg-amber-50 ring-1 ring-amber-300 text-amber-900 rounded-2xl p-4">
+        <span class="text-xl leading-none">🔍</span>
+        <div>
+          <p class="font-bold text-sm mb-0.5">Low confidence — no score shown</p>
+          <p id="low-confidence-text" class="text-sm"></p>
+        </div>
+      </div>
+
+      <!-- What the app measured vs compared against -->
+      <div id="measured-boxes" class="hidden mb-4">
+        <p class="text-[11px] font-bold tracking-wide uppercase text-[color:var(--muted)] mb-2">
+          What was measured
+          <span class="ml-2 normal-case font-normal"><span class="text-rose-600">▬</span> sample &nbsp;<span class="text-blue-600">▭</span> paper reference</span>
+        </p>
+        <div class="grid grid-cols-2 gap-3">
+          <div><div class="text-[10px] text-[color:var(--muted)] mb-1">BEFORE</div>
+               <div id="thumb-before" class="preview-wrap rounded-xl overflow-hidden ring-1 ring-black/5"></div></div>
+          <div><div class="text-[10px] text-[color:var(--muted)] mb-1">AFTER</div>
+               <div id="thumb-after" class="preview-wrap rounded-xl overflow-hidden ring-1 ring-black/5"></div></div>
+        </div>
+      </div>
+
+      <!-- Sample-quality rejection (protocol not followed) -->
+      <div id="sample-blocked" class="hidden mb-4 flex gap-3 items-start bg-rose-50 ring-1 ring-rose-300 text-rose-900 rounded-2xl p-4">
+        <span class="text-xl leading-none">🧪</span>
+        <div>
+          <p class="font-bold text-sm mb-0.5">No score — sample not measurable</p>
+          <p id="sample-blocked-text" class="text-sm"></p>
+          <p class="text-xs mt-1 opacity-75">Use the thin clear liquid from the top of the settled extract — never the paste.</p>
+        </div>
+      </div>
+
+      <!-- Consistency spread -->
+      <div id="consistency-box" class="hidden mb-4 bg-[color:var(--cream)] ring-1 ring-black/5 rounded-2xl p-3">
+        <p class="text-[11px] font-bold tracking-wide uppercase text-[color:var(--muted)] mb-1">Consistency</p>
+        <p id="consistency-text" class="text-sm"></p>
+      </div>
+
+      <!-- Over-range warning -->
+      <div id="over-range" class="hidden mb-4 flex gap-3 items-start bg-amber-50 ring-1 ring-amber-300 text-amber-900 rounded-2xl p-3">
+        <span class="text-xl leading-none">⚠️</span>
+        <p id="over-range-text" class="text-sm"></p>
+      </div>
 
       <!-- QC rejection (shown instead of a score) -->
       <div id="qc-blocked" class="hidden mb-4 flex gap-3 items-start bg-orange-50 ring-1 ring-orange-300 text-orange-900 rounded-2xl p-4">
@@ -337,6 +476,26 @@
   setupZone("before");
   setupZone("after");
 
+  // --- consistency mode: extra repeat zones ------------------------------
+  ["before2", "after2", "before3", "after3"].forEach(k => {
+    state[k] = { file: null, roi: null };
+    setupZone(k);
+  });
+
+  let consistencyOn = false;
+  const consToggle = document.getElementById("consistency-toggle");
+  consToggle.addEventListener("click", () => {
+    consistencyOn = !consistencyOn;
+    document.getElementById("consistency-zones").classList.toggle("hidden", !consistencyOn);
+    consToggle.textContent = consistencyOn ? "On" : "Off";
+    consToggle.classList.toggle("bg-[color:var(--ink)]", consistencyOn);
+    consToggle.classList.toggle("text-white", consistencyOn);
+    if (!consistencyOn) {
+      // drop any repeat images so they are not silently submitted
+      ["before2", "after2", "before3", "after3"].forEach(k => state[k].file = null);
+    }
+  });
+
   // ----------------------------------------------------------------------
   // Analyse -> POST /analyze
   // ----------------------------------------------------------------------
@@ -357,9 +516,29 @@
     if (state.before.roi) fd.append("before_sample_roi", state.before.roi.join(","));
     if (state.after.roi)  fd.append("after_sample_roi", state.after.roi.join(","));
 
+    // consistency repeats — only sent as complete before/after pairs
+    if (consistencyOn) {
+      [["before2","after2","_2"], ["before3","after3","_3"]].forEach(([b,a,sfx]) => {
+        if (state[b].file && state[a].file) {
+          fd.append("before_image" + sfx, state[b].file);
+          fd.append("after_image" + sfx, state[a].file);
+        }
+      });
+    }
+
     setLoading(true);
     try {
-      const res = await fetch(API_BASE + "/analyze", { method: "POST", body: fd });
+      // NOTE: ngrok's free tier serves an interstitial "you are about to visit"
+      // HTML page to browser requests, which would break this fetch. The
+      // ngrok-skip-browser-warning header bypasses it. It is ignored by every
+      // other host (Cloudflare Tunnel, localhost, etc.), so it is always safe.
+      // Do NOT set Content-Type here — the browser must set the multipart
+      // boundary for FormData itself.
+      const res = await fetch(API_BASE + "/analyze", {
+        method: "POST",
+        body: fd,
+        headers: { "ngrok-skip-browser-warning": "true" },
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Analysis failed.");
       renderResult(data);
@@ -384,8 +563,108 @@
   function show(id, on) { document.getElementById(id).classList.toggle("hidden", !on); }
   const rgb = (a) => Array.isArray(a) ? "[" + a.map(v => Number(v).toFixed(0)).join(", ") + "]" : "–";
 
+  // ----------------------------------------------------------------------
+  // Draw the sample + paper regions the backend actually used, so the user can
+  // SEE what was measured and what it was compared against.
+  // ----------------------------------------------------------------------
+  function drawMeasuredBoxes(d) {
+    const sc = d.scene;
+    const haveScene = sc && sc.before && sc.after;
+    show("measured-boxes", !!haveScene);
+    if (!haveScene) return;
+
+    [["before", "thumb-before"], ["after", "thumb-after"]].forEach(([key, elId]) => {
+      const host = document.getElementById(elId);
+      const file = state[key].file;
+      host.innerHTML = "";
+      if (!file) return;
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(file);
+      host.appendChild(img);
+
+      img.onload = () => {
+        // Backend boxes are in the DOWNSCALED image space it processed, so
+        // scale by the box's own image dimensions, not the natural ones.
+        const view = sc[key] || {};
+        const dims = (d.debug && d.debug[key] && d.debug[key].image_size) || null;
+        const srcW = dims ? dims[0] : img.naturalWidth;
+        const srcH = dims ? dims[1] : img.naturalHeight;
+        const place = (box, cls, tag, color) => {
+          if (!box) return;
+          const [x, y, w, h] = box;
+          const el = document.createElement("div");
+          el.className = cls;
+          el.style.left   = (x / srcW * 100) + "%";
+          el.style.top    = (y / srcH * 100) + "%";
+          el.style.width  = (w / srcW * 100) + "%";
+          el.style.height = (h / srcH * 100) + "%";
+          const t = document.createElement("span");
+          t.className = "box-tag"; t.textContent = tag; t.style.background = color;
+          el.appendChild(t);
+          host.appendChild(el);
+        };
+        place(view.sample_bbox, "sample-box", "SAMPLE", "#e11d48");
+        place(view.paper_bbox,  "paper-box",  "PAPER",  "#2563eb");
+      };
+    });
+  }
+
   function renderResult(d) {
     document.getElementById("result").classList.remove("hidden");
+
+    // --- LAYER 3: confidence badge ---------------------------------------
+    const conf = d.confidence || null;
+    show("confidence-row", !!conf);
+    if (conf) {
+      const badge = document.getElementById("confidence-badge");
+      badge.textContent = conf;
+      badge.className = "text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full " + ({
+        High:   "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300",
+        Medium: "bg-amber-100 text-amber-800 ring-1 ring-amber-300",
+        Low:    "bg-rose-100 text-rose-800 ring-1 ring-rose-300",
+      }[conf] || "bg-slate-100 text-slate-700");
+      document.getElementById("scene-source").textContent =
+        d.scene_source === "gemma" ? "regions located by vision model"
+                                   : "regions auto-detected";
+    }
+
+    // Low confidence -> the number is deliberately withheld by the backend.
+    const lowConf = !!d.low_confidence;
+    show("low-confidence", lowConf);
+    if (lowConf) {
+      document.getElementById("low-confidence-text").textContent =
+        d.low_confidence_message ||
+        "Retake with a thin, evenly-lit liquid layer and white paper in frame.";
+    }
+
+    // --- draw the measured regions back onto thumbnails ------------------
+    drawMeasuredBoxes(d);
+
+    // --- sample-quality gate: protocol not followed -> no score ----------
+    const sampleOk = d.sample_ok !== false;
+    show("sample-blocked", !sampleOk);
+    if (!sampleOk) {
+      document.getElementById("sample-blocked-text").textContent =
+        (d.sample_issues || [d.warning]).join(" ");
+    }
+
+    // --- consistency spread ----------------------------------------------
+    const reps = d.replicates || 1;
+    show("consistency-box", sampleOk && reps > 1);
+    if (reps > 1) {
+      const spread = Number(d.reaction_spread || 0);
+      let txt = `${reps} readings averaged · spread (max−min) = ${spread.toFixed(4)}. `;
+      txt += d.consistency_warning
+           ? d.consistency_warning
+           : "Readings agree well — protocol is repeatable.";
+      document.getElementById("consistency-text").textContent = txt;
+    }
+
+    // --- over-range -------------------------------------------------------
+    show("over-range", sampleOk && !!d.over_range);
+    if (d.over_range && d.over_range_note) {
+      document.getElementById("over-range-text").textContent = d.over_range_note;
+    }
 
     // --- QC gate: photo unusable -> retake message instead of a score ----
     const qcOk = d.qc_passed !== false;
@@ -406,14 +685,28 @@
 
     // --- comparability gate: warning shown instead of a score ------------
     const comparable = d.comparable !== false;
-    show("not-comparable", !comparable && qcOk);
-    show("score-block", comparable && qcOk);
+    // CRITICAL: `Number(null) === 0` in JavaScript. purity_index is legitimately
+    // null whenever the backend withholds it (low confidence, not comparable,
+    // sample-quality gate, saturation block) — treating that null as the
+    // NUMBER 0 is exactly the bug that made a strong PURE sample display as
+    // "0%". A score may only be rendered when purity_index is an actual
+    // number AND none of the withholding conditions are active.
+    const hasScore = comparable && qcOk && sampleOk && !lowConf
+                    && typeof d.purity_index === "number"
+                    && Number.isFinite(d.purity_index);
+    show("not-comparable", !comparable && qcOk && sampleOk && !lowConf);
+    show("score-block", hasScore);
     if (!comparable) {
       document.getElementById("not-comparable-text").textContent =
         d.warning || "Retake both photos with the same white background, lighting and distance.";
-    } else {
-      const score = Number(d.purity_index);
-      document.getElementById("score-num").textContent = score.toFixed(0) + "%";
+    } else if (hasScore) {
+      const score = d.purity_index;
+      // Over-range reads print ">100 (over-range...)" rather than a flat 100%,
+      // which would hide a too-thick sample behind a perfect-looking score.
+      const el = document.getElementById("score-num");
+      el.textContent = d.purity_display || (score.toFixed(0) + "%");
+      el.classList.toggle("text-2xl", !!d.over_range);
+      el.classList.toggle("text-4xl", !d.over_range);
       document.getElementById("score-bar").style.width =
         Math.max(0, Math.min(100, score)) + "%";
       document.getElementById("band").textContent = d.band;
@@ -435,14 +728,16 @@
     document.getElementById("reaction-strength").textContent = fmt(d.reaction_strength);
     document.getElementById("before-yellow").textContent = fmt(d.before_yellow);
 
-    // --- mode note --------------------------------------------------------
+    // --- mode note: "calibrated (N points)" vs "uncalibrated heuristic" --
     let modeTxt = "";
     if (!comparable) {
       modeTxt = "No purity index computed — see warning above and the debug panel.";
-    } else if (d.debug && d.debug.mode === "calibrated") {
-      modeTxt = "Index from your calibration data";
-      if (d.debug.estimated_curcumin_percent != null)
-        modeTxt += ` (est. ~${d.debug.estimated_curcumin_percent}% curcumin).`;
+    } else if (lowConf) {
+      modeTxt = "No purity index shown — see low-confidence note above.";
+    } else if (d.calibration_mode_label) {
+      modeTxt = d.calibration_mode === "calibrated"
+        ? `Score from ${d.calibration_mode_label} — fitted directly on real measured samples.`
+        : `Score from the ${d.calibration_mode_label} (REACTION_REF guess) — add real samples via /calibrate to improve accuracy.`;
     } else {
       modeTxt = "Index from the literature-anchored reaction-strength heuristic (not yet calibrated).";
     }
@@ -467,12 +762,33 @@
       ["white point difference", `${fmt(d.white_diff)}  (tol ${fmt(d.white_tolerance)})`],
       ["norm R/G/B — before", rgb(b.norm_rgb && b.norm_rgb.map(x => x))],
       ["norm R/G/B — after", rgb(a.norm_rgb && a.norm_rgb.map(x => x))],
+      ["— LAYER 1: scene —", (d.scene && d.scene.source) || "auto"],
+      ["align_ok", String((d.scene && d.scene.align_ok) ?? "unknown")],
+      ["layer_quality (before/after)",
+        d.scene ? `${d.scene.before.layer_quality} / ${d.scene.after.layer_quality}` : "–"],
+      ["sample_bbox before", d.scene && d.scene.before.sample_bbox ? JSON.stringify(d.scene.before.sample_bbox) : "–"],
+      ["paper_bbox before",  d.scene && d.scene.before.paper_bbox  ? JSON.stringify(d.scene.before.paper_bbox)  : "–"],
+      ["sample_bbox after",  d.scene && d.scene.after.sample_bbox  ? JSON.stringify(d.scene.after.sample_bbox)  : "–"],
+      ["paper_bbox after",   d.scene && d.scene.after.paper_bbox   ? JSON.stringify(d.scene.after.paper_bbox)   : "–"],
+      ["box source (sample/paper)",
+        d.scene ? `${d.scene.before.sample_source} / ${d.scene.before.paper_source}` : "–"],
+      ["— LAYER 2: math —", ""],
       ["reaction_strength (PRIMARY)", fmt(d.reaction_strength)],
       ["reaction_delta (signed)", fmt(d.reaction_delta)],
       ["before_yellow (dye check)", fmt(d.before_yellow)],
       ["after darkness (mean 0-255)", g.after_darkness != null ? g.after_darkness : "–"],
       ["purity_index", d.purity_index == null ? "— (no score)" : d.purity_index],
       ["mode", g.mode || "—"],
+      ["calibration points used", g.calibration_points_used != null ? String(g.calibration_points_used) : "0"],
+      ["calibration fit (slope/intercept)", g.calibration_fit
+        ? `slope=${Number(g.calibration_fit.slope).toFixed(3)} intercept=${Number(g.calibration_fit.intercept).toFixed(3)}`
+        : "– (heuristic mode)"],
+      ["calibration points (raw)", g.calibration_points ? JSON.stringify(g.calibration_points) : "–"],
+      ["— LAYER 3: confidence —", d.confidence || "–"],
+      ["confidence score", d.confidence_score != null ? String(d.confidence_score) : "–"],
+      ["confidence breakdown", g.confidence_breakdown ? JSON.stringify(g.confidence_breakdown) : "–"],
+      ["purity from MATH (always)", g.purity_index_math != null ? g.purity_index_math + "%" : "–"],
+      ["raw Gemma JSON", (d.scene && d.scene.raw_gemma_json) ? d.scene.raw_gemma_json : "(none — auto-detected)"],
     ];
     const norm = (a2) => Array.isArray(a2) ? "[" + a2.map(v => Number(v).toFixed(3)).join(", ") + "]" : "–";
     // fix norm rows to 3 decimals
