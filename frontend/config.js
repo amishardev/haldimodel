@@ -9,7 +9,9 @@
 // Leave it as "" ONLY if the FastAPI backend is serving this page itself
 // (i.e. you opened http://127.0.0.1:8000 directly).
 // ===========================================================================
-window.HALDI_API_BASE = "";
+// PASTE YOUR NGROK URL HERE (no trailing slash), e.g.:
+// window.HALDI_API_BASE = "https://abc123.ngrok-free.app";
+window.HALDI_API_BASE = "https://jackpot-shuffle-boxlike.ngrok-free.dev";
 
 // Tip: you can also override without editing/redeploying, for quick tests:
 //   https://your-site.netlify.app/?api=https://your-tunnel.trycloudflare.com
