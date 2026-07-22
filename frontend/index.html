@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Navdhi — Curcumin Purity Analyser</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Netlify build only: sets window.HALDI_API_BASE to the backend tunnel URL.
+       Absent when FastAPI serves this page (404 is harmless) -> same-origin. -->
+  <script src="config.js"></script>
+  <style>
+    :root { --cream: #f4f3ee; --ink: #111110; --muted: #8a8a82; }
+    body { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; background: var(--cream); }
+    .roi-box {
+      position: absolute; border: 2px solid var(--ink);
+      background: rgba(17,17,16,0.10); pointer-events: none;
+    }
+    .preview-wrap { position: relative; touch-action: none; }
+    .preview-wrap img { display: block; width: 100%; border-radius: 1rem; }
+    .drop-active { border-color: var(--ink) !important; background: #fff; }
+    .zone { transition: border-color .2s, background .2s; }
+    .zone:hover { border-color: #b9b7ae; }
+  </style>
+</head>
+<body class="min-h-screen text-[color:var(--ink)]">
+  <div class="max-w-2xl mx-auto px-5 py-8">
+
+    <!-- Top bar -->
+    <div class="flex items-center justify-between mb-12">
+      <img src="static/navdhi-logo.png" alt="Navdhi — The Essence of Innovation" class="h-9 w-auto" />
+      <span class="bg-[color:var(--ink)] text-white text-xs font-bold tracking-wide px-4 py-2 rounded-full">V2 BETA</span>
+    </div>
+
+    <!-- Heading -->
+    <header class="mb-9">
+      <h1 class="text-5xl sm:text-6xl font-bold tracking-tight leading-[0.95]">
+        Curcumin Purity,<br />Instantly.
+      </h1>
+      <p class="mt-5 text-lg text-[color:var(--muted)] max-w-md leading-snug">
+        Upload two photos of your turmeric extract — one before and one after
+        adding NAVDHI REAGENT get an indicative purity score in seconds.
+      </p>
+    </header>
+
+    <!-- Upload zones -->
+    <div class="grid sm:grid-cols-2 gap-4 mb-4">
+      <!-- BEFORE -->
+      <div>
+        <p class="text-[11px] font-semibold tracking-[0.15em] text-[color:var(--muted)] uppercase mb-2">Step 1 · Before (extract only)</p>
+        <label id="before-drop" class="zone block bg-white/70 border-2 border-dashed border-[#d6d3cb] rounded-3xl p-6 text-center cursor-pointer">
+          <input type="file" accept="image/*" class="hidden" data-role="before-input" />
+          <div data-role="before-placeholder" class="py-4">
+            <div class="mx-auto w-14 h-14 rounded-2xl bg-white shadow-sm ring-1 ring-black/5 grid place-items-center mb-4">
+              <svg class="w-6 h-6 text-[color:var(--ink)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+            <div class="font-bold text-lg">Tap to add a photo</div>
+            <div class="text-sm text-[color:var(--muted)] mt-1">Camera or gallery — JPG, PNG, WEBP</div>
+          </div>
+          <div data-role="before-preview" class="preview-wrap hidden"></div>
+        </label>
+        <div class="flex items-center justify-between mt-2 px-1">
+          <p class="text-[11px] text-[color:var(--muted)]">Drag on the image to mark the vial · skip = centre crop</p>
+          <button data-role="before-reset" class="hidden text-[11px] font-semibold underline">Reset</button>
+        </div>
+      </div>
+
+      <!-- AFTER -->
+      <div>
+        <p class="text-[11px] font-semibold tracking-[0.15em] text-[color:var(--muted)] uppercase mb-2">Step 2 · After (+ NAVDHI REAGENT₃)</p>
+        <label id="after-drop" class="zone block bg-white/70 border-2 border-dashed border-[#d6d3cb] rounded-3xl p-6 text-center cursor-pointer">
+          <input type="file" accept="image/*" class="hidden" data-role="after-input" />
+          <div data-role="after-placeholder" class="py-4">
+            <div class="mx-auto w-14 h-14 rounded-2xl bg-white shadow-sm ring-1 ring-black/5 grid place-items-center mb-4">
+              <svg class="w-6 h-6 text-[color:var(--ink)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+            <div class="font-bold text-lg">Tap to add a photo</div>
+            <div class="text-sm text-[color:var(--muted)] mt-1">Camera or gallery — JPG, PNG, WEBP</div>
+          </div>
+          <div data-role="after-preview" class="preview-wrap hidden"></div>
+        </label>
+        <div class="flex items-center justify-between mt-2 px-1">
+          <p class="text-[11px] text-[color:var(--muted)]">Drag on the image to mark the vial · skip = centre crop</p>
+          <button data-role="after-reset" class="hidden text-[11px] font-semibold underline">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- White-reference hint (styled like the toggle card) -->
+    <div class="bg-white rounded-2xl ring-1 ring-black/5 px-5 py-4 mb-4 flex items-center justify-between">
+      <div>
+        <div class="font-bold">White reference — required</div>
+        <div class="text-sm text-[color:var(--muted)]">Shoot BOTH photos on the same white paper/background, same light &amp; distance. Mismatched whites → no score.</div>
+      </div>
+      <span class="text-xs font-semibold tracking-wide text-[color:var(--muted)] uppercase">Auto</span>
+    </div>
+
+    <!-- Analyse button -->
+    <button id="analyze-btn"
+      class="w-full inline-flex items-center justify-center gap-2 bg-[color:var(--ink)] hover:bg-black disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-lg px-8 py-4 rounded-full shadow-sm transition">
+      <svg id="spinner" class="hidden animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+      </svg>
+      <svg id="search-icon" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+      </svg>
+      <span id="analyze-label">Analyse Sample</span>
+    </button>
+    <p id="form-error" class="hidden mt-3 text-sm text-red-600 text-center"></p>
+
+    <!-- Result card -->
+    <section id="result" class="hidden bg-white rounded-3xl shadow-sm ring-1 ring-black/5 p-6 mt-6">
+      <h2 class="text-lg font-bold mb-4">Result</h2>
+
+      <!-- QC rejection (shown instead of a score) -->
+      <div id="qc-blocked" class="hidden mb-4 flex gap-3 items-start bg-orange-50 ring-1 ring-orange-300 text-orange-900 rounded-2xl p-4">
+        <span class="text-xl leading-none">📷</span>
+        <div>
+          <p class="font-bold text-sm mb-0.5">No score — photo quality too low</p>
+          <p id="qc-blocked-text" class="text-sm"></p>
+          <p id="qc-issues" class="text-xs mt-1 opacity-75 font-mono"></p>
+        </div>
+      </div>
+
+      <!-- QC advisory warnings (score still shown) -->
+      <div id="qc-warn" class="hidden mb-4 bg-[color:var(--cream)] ring-1 ring-black/5 rounded-2xl p-3">
+        <p class="text-[11px] font-bold tracking-wide uppercase text-[color:var(--muted)] mb-1">Photo quality notes</p>
+        <p id="qc-warn-text" class="text-sm"></p>
+      </div>
+
+      <!-- Not-comparable warning (shown instead of a score) -->
+      <div id="not-comparable" class="hidden mb-4 flex gap-3 items-start bg-amber-50 ring-1 ring-amber-300 text-amber-900 rounded-2xl p-4">
+        <span class="text-xl leading-none">🚫</span>
+        <div>
+          <p class="font-bold text-sm mb-0.5">No score — images not comparable</p>
+          <p id="not-comparable-text" class="text-sm"></p>
+        </div>
+      </div>
+
+      <!-- Gauge (hidden when not comparable) -->
+      <div id="score-block">
+        <div class="mb-1 flex items-end justify-between">
+          <span class="text-sm text-[color:var(--muted)]">Indicative purity index</span>
+          <span id="score-num" class="text-4xl font-bold">–</span>
+        </div>
+        <div class="w-full h-4 rounded-full bg-[color:var(--cream)] overflow-hidden">
+          <div id="score-bar" class="h-full rounded-full bg-gradient-to-r from-rose-400 via-amber-400 to-emerald-500 transition-all duration-700" style="width:0%"></div>
+        </div>
+        <div id="band" class="mt-3 inline-block text-sm font-semibold px-3 py-1 rounded-full bg-[color:var(--cream)]">–</div>
+      </div>
+
+      <!-- Dye cross-check warning -->
+      <div id="dye-warning" class="hidden mt-4 flex gap-3 items-start bg-rose-50 ring-1 ring-rose-200 text-rose-800 rounded-2xl p-3">
+        <span class="text-xl leading-none">⚠️</span>
+        <p id="dye-text" class="text-sm"></p>
+      </div>
+
+      <!-- Saturation note -->
+      <div id="sat-warning" class="hidden mt-4 flex gap-3 items-start bg-[color:var(--cream)] ring-1 ring-black/10 rounded-2xl p-3">
+        <span class="text-xl leading-none">🌑</span>
+        <p id="sat-text" class="text-sm"></p>
+      </div>
+
+      <!-- Gemma note -->
+      <div id="gemma-box" class="hidden mt-4 bg-[color:var(--cream)] ring-1 ring-black/5 rounded-2xl p-3">
+        <p class="text-[11px] font-bold tracking-wide uppercase text-[color:var(--muted)] mb-1">AI observation (qualitative only)</p>
+        <p id="gemma-text" class="text-sm"></p>
+      </div>
+
+      <!-- Raw signed numbers (ALWAYS shown) -->
+      <div class="mt-5 grid grid-cols-2 gap-3 text-sm">
+        <div class="bg-[color:var(--cream)] rounded-2xl p-3">
+          <div class="text-[color:var(--muted)] text-xs">reaction_strength · primary</div>
+          <div id="reaction-strength" class="font-mono font-bold text-base">–</div>
+        </div>
+        <div class="bg-[color:var(--cream)] rounded-2xl p-3">
+          <div class="text-[color:var(--muted)] text-xs">before_yellow · dye check</div>
+          <div id="before-yellow" class="font-mono font-bold text-base">–</div>
+        </div>
+      </div>
+      <p id="mode-note" class="mt-2 text-xs text-[color:var(--muted)]"></p>
+
+      <!-- Debug panel (always available, collapsible) -->
+      <details id="debug-panel" class="mt-5 group">
+        <summary class="cursor-pointer text-[11px] font-bold tracking-[0.15em] uppercase text-[color:var(--muted)] select-none">
+          Debug panel — why this number ▾
+        </summary>
+        <div class="overflow-x-auto mt-3">
+          <table class="w-full text-xs font-mono border-collapse">
+            <tbody id="debug-body"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <!-- Disclaimer (always shown with the numbers) -->
+      <div class="mt-5 border-t border-black/5 pt-4">
+        <p id="disclaimer" class="text-xs text-[color:var(--muted)] italic"></p>
+      </div>
+    </section>
+
+    <!-- Footer caption -->
+    <p class="text-center text-[11px] font-semibold tracking-[0.2em] text-[color:var(--muted)] uppercase mt-10 pb-8">
+      Navdhi Advanced Curcumin Analyser
+    </p>
+  </div>
+
+  <script>
+  // ----------------------------------------------------------------------
+  // State: selected files + optional ROI fractions (fx,fy,fw,fh) per image.
+  // ----------------------------------------------------------------------
+  // ----------------------------------------------------------------------
+  // API BASE — one file works in BOTH deployments:
+  //   * served by FastAPI itself  -> stays "" (same-origin, relative URLs)
+  //   * hosted on Netlify         -> config.js sets window.HALDI_API_BASE to
+  //                                  your Cloudflare tunnel URL
+  // Override at runtime for testing with ?api=https://host (sticks via
+  // localStorage so you don't have to re-add it on every page load).
+  // ----------------------------------------------------------------------
+  const API_BASE = (() => {
+    const q = new URLSearchParams(location.search).get("api");
+    if (q !== null) {
+      q ? localStorage.setItem("haldi_api", q) : localStorage.removeItem("haldi_api");
+    }
+    const base = localStorage.getItem("haldi_api")
+              || window.HALDI_API_BASE
+              || "";
+    return base.replace(/\/+$/, "");   // strip trailing slash
+  })();
+
+  const state = {
+    before: { file: null, roi: null },
+    after:  { file: null, roi: null },
+  };
+
+  function byRole(role) { return document.querySelector(`[data-role="${role}"]`); }
+
+  // ----------------------------------------------------------------------
+  // Wire one upload zone (file select, drag-drop, preview, ROI drawing).
+  // ----------------------------------------------------------------------
+  function setupZone(key) {
+    const input   = byRole(`${key}-input`);
+    const drop    = document.getElementById(`${key}-drop`);
+    const preview = byRole(`${key}-preview`);
+    const placeholder = byRole(`${key}-placeholder`);
+    const resetBtn = byRole(`${key}-reset`);
+
+    function loadFile(file) {
+      if (!file || !file.type.startsWith("image/")) return;
+      state[key].file = file;
+      state[key].roi = null;
+      const url = URL.createObjectURL(file);
+      preview.innerHTML = `<img alt="${key} preview" src="${url}" />`;
+      preview.classList.remove("hidden");
+      placeholder.classList.add("hidden");
+      resetBtn.classList.remove("hidden");
+      attachRoiDrawing(key, preview);
+    }
+
+    input.addEventListener("change", (e) => loadFile(e.target.files[0]));
+
+    // Drag-and-drop a file onto the zone.
+    ["dragenter", "dragover"].forEach(ev =>
+      drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("drop-active"); }));
+    ["dragleave", "drop"].forEach(ev =>
+      drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("drop-active"); }));
+    drop.addEventListener("drop", (e) => {
+      if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+    });
+
+    resetBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      state[key].roi = null;
+      const existing = preview.querySelector(".roi-box");
+      if (existing) existing.remove();
+    });
+  }
+
+  // ----------------------------------------------------------------------
+  // Click-drag ROI selection over a preview image. Stores fractions 0..1.
+  // ----------------------------------------------------------------------
+  function attachRoiDrawing(key, preview) {
+    const img = preview.querySelector("img");
+    let startX, startY, box = null, drawing = false;
+
+    function relPoint(e) {
+      const r = img.getBoundingClientRect();
+      const x = Math.min(Math.max(e.clientX - r.left, 0), r.width);
+      const y = Math.min(Math.max(e.clientY - r.top, 0), r.height);
+      return { x, y, w: r.width, h: r.height };
+    }
+
+    preview.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      drawing = true;
+      const p = relPoint(e);
+      startX = p.x; startY = p.y;
+      const old = preview.querySelector(".roi-box");
+      if (old) old.remove();
+      box = document.createElement("div");
+      box.className = "roi-box";
+      preview.appendChild(box);
+      preview.setPointerCapture(e.pointerId);
+    });
+
+    preview.addEventListener("pointermove", (e) => {
+      if (!drawing || !box) return;
+      const p = relPoint(e);
+      const x = Math.min(startX, p.x), y = Math.min(startY, p.y);
+      const w = Math.abs(p.x - startX), h = Math.abs(p.y - startY);
+      box.style.left = x + "px"; box.style.top = y + "px";
+      box.style.width = w + "px"; box.style.height = h + "px";
+    });
+
+    preview.addEventListener("pointerup", (e) => {
+      if (!drawing) return;
+      drawing = false;
+      const p = relPoint(e);
+      const x = Math.min(startX, p.x), y = Math.min(startY, p.y);
+      const w = Math.abs(p.x - startX), h = Math.abs(p.y - startY);
+      // Ignore tiny accidental drags -> treat as "no ROI".
+      if (w < 8 || h < 8) {
+        state[key].roi = null;
+        if (box) box.remove();
+        return;
+      }
+      state[key].roi = [x / p.w, y / p.h, w / p.w, h / p.h];
+    });
+  }
+
+  setupZone("before");
+  setupZone("after");
+
+  // ----------------------------------------------------------------------
+  // Analyse -> POST /analyze
+  // ----------------------------------------------------------------------
+  const analyzeBtn = document.getElementById("analyze-btn");
+  analyzeBtn.addEventListener("click", async () => {
+    const err = document.getElementById("form-error");
+    err.classList.add("hidden");
+
+    if (!state.before.file || !state.after.file) {
+      err.textContent = "Please upload BOTH a before and an after image.";
+      err.classList.remove("hidden");
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("before_image", state.before.file);
+    fd.append("after_image", state.after.file);
+    if (state.before.roi) fd.append("before_sample_roi", state.before.roi.join(","));
+    if (state.after.roi)  fd.append("after_sample_roi", state.after.roi.join(","));
+
+    setLoading(true);
+    try {
+      const res = await fetch(API_BASE + "/analyze", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Analysis failed.");
+      renderResult(data);
+    } catch (e) {
+      err.textContent = e.message || "Something went wrong.";
+      err.classList.remove("hidden");
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  function setLoading(on) {
+    document.getElementById("spinner").classList.toggle("hidden", on ? false : true);
+    document.getElementById("search-icon").classList.toggle("hidden", on);
+    document.getElementById("analyze-label").textContent = on ? "Analysing…" : "Analyse Sample";
+    analyzeBtn.disabled = on;
+  }
+
+  // ----------------------------------------------------------------------
+  // Render the result card.
+  // ----------------------------------------------------------------------
+  function show(id, on) { document.getElementById(id).classList.toggle("hidden", !on); }
+  const rgb = (a) => Array.isArray(a) ? "[" + a.map(v => Number(v).toFixed(0)).join(", ") + "]" : "–";
+
+  function renderResult(d) {
+    document.getElementById("result").classList.remove("hidden");
+
+    // --- QC gate: photo unusable -> retake message instead of a score ----
+    const qcOk = d.qc_passed !== false;
+    show("qc-blocked", !qcOk);
+    if (!qcOk) {
+      document.getElementById("qc-blocked-text").textContent =
+        d.warning || "Please retake both photos.";
+      document.getElementById("qc-issues").textContent =
+        (d.qc_issues || []).join(" · ");
+    }
+
+    // --- QC advisory notes (score still shown) ---------------------------
+    const qcWarnings = d.qc_warnings || [];
+    show("qc-warn", qcOk && qcWarnings.length > 0);
+    if (qcWarnings.length) {
+      document.getElementById("qc-warn-text").textContent = qcWarnings.join(" ");
+    }
+
+    // --- comparability gate: warning shown instead of a score ------------
+    const comparable = d.comparable !== false;
+    show("not-comparable", !comparable && qcOk);
+    show("score-block", comparable && qcOk);
+    if (!comparable) {
+      document.getElementById("not-comparable-text").textContent =
+        d.warning || "Retake both photos with the same white background, lighting and distance.";
+    } else {
+      const score = Number(d.purity_index);
+      document.getElementById("score-num").textContent = score.toFixed(0) + "%";
+      document.getElementById("score-bar").style.width =
+        Math.max(0, Math.min(100, score)) + "%";
+      document.getElementById("band").textContent = d.band;
+    }
+
+    // --- dye cross-check --------------------------------------------------
+    show("dye-warning", d.dye_flag && d.dye_note);
+    if (d.dye_flag && d.dye_note) document.getElementById("dye-text").textContent = d.dye_note;
+
+    // --- saturation note --------------------------------------------------
+    show("sat-warning", !!d.saturation_note);
+    if (d.saturation_note) document.getElementById("sat-text").textContent = d.saturation_note;
+
+    // --- gemma note -------------------------------------------------------
+    show("gemma-box", !!d.gemma_note);
+    if (d.gemma_note) document.getElementById("gemma-text").textContent = d.gemma_note;
+
+    // --- raw signed numbers (always) --------------------------------------
+    document.getElementById("reaction-strength").textContent = fmt(d.reaction_strength);
+    document.getElementById("before-yellow").textContent = fmt(d.before_yellow);
+
+    // --- mode note --------------------------------------------------------
+    let modeTxt = "";
+    if (!comparable) {
+      modeTxt = "No purity index computed — see warning above and the debug panel.";
+    } else if (d.debug && d.debug.mode === "calibrated") {
+      modeTxt = "Index from your calibration data";
+      if (d.debug.estimated_curcumin_percent != null)
+        modeTxt += ` (est. ~${d.debug.estimated_curcumin_percent}% curcumin).`;
+    } else {
+      modeTxt = "Index from the literature-anchored reaction-strength heuristic (not yet calibrated).";
+    }
+    document.getElementById("mode-note").textContent = modeTxt;
+
+    buildDebug(d);
+    document.getElementById("disclaimer").textContent = d.disclaimer;
+    document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function fmt(v) { return (v === null || v === undefined) ? "–" : Number(v).toFixed(4); }
+
+  // Always-visible debug table: shows exactly why two samples read same/diff.
+  function buildDebug(d) {
+    const g = d.debug || {};
+    const b = g.before || {}, a = g.after || {};
+    const rows = [
+      ["SAMPLE R/G/B — before", rgb(b.sample_rgb)],
+      ["SAMPLE R/G/B — after", rgb(a.sample_rgb)],
+      ["WHITE R/G/B — before", rgb(g.white_before || b.white_rgb)],
+      ["WHITE R/G/B — after", rgb(g.white_after || a.white_rgb)],
+      ["white point difference", `${fmt(d.white_diff)}  (tol ${fmt(d.white_tolerance)})`],
+      ["norm R/G/B — before", rgb(b.norm_rgb && b.norm_rgb.map(x => x))],
+      ["norm R/G/B — after", rgb(a.norm_rgb && a.norm_rgb.map(x => x))],
+      ["reaction_strength (PRIMARY)", fmt(d.reaction_strength)],
+      ["reaction_delta (signed)", fmt(d.reaction_delta)],
+      ["before_yellow (dye check)", fmt(d.before_yellow)],
+      ["after darkness (mean 0-255)", g.after_darkness != null ? g.after_darkness : "–"],
+      ["purity_index", d.purity_index == null ? "— (no score)" : d.purity_index],
+      ["mode", g.mode || "—"],
+    ];
+    const norm = (a2) => Array.isArray(a2) ? "[" + a2.map(v => Number(v).toFixed(3)).join(", ") + "]" : "–";
+    // fix norm rows to 3 decimals
+    rows[5][1] = norm(b.norm_rgb);
+    rows[6][1] = norm(a.norm_rgb);
+
+    document.getElementById("debug-body").innerHTML = rows.map(([k, v]) =>
+      `<tr class="border-b border-black/5">
+         <td class="py-1 pr-3 text-[color:var(--muted)] whitespace-nowrap">${k}</td>
+         <td class="py-1 text-right">${v}</td>
+       </tr>`).join("");
+  }
+  </script>
+</body>
+</html>

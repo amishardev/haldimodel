@@ -1,0 +1,30 @@
+# Netlify config for the Haldi frontend.
+# This is a pure static site — no build step, no Node, no Python.
+#
+# In Netlify: "Add new site" -> import from GitHub -> pick this repo, then set
+#   Base directory:    frontend
+#   Build command:     (leave empty)
+#   Publish directory: frontend
+# These values are already declared below, so importing the repo just works.
+
+[build]
+  base = "frontend"
+  publish = "."
+  command = ""
+
+# config.js must never be cached, or users keep hitting an old backend URL
+# after you change tunnels.
+[[headers]]
+  for = "/config.js"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0"
+
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

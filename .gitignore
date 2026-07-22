@@ -1,0 +1,15 @@
+# virtual environments
+.venv/
+venv/
+
+# python
+__pycache__/
+*.pyc
+
+# runtime data
+calibration_data.json
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
