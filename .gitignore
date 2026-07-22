@@ -13,3 +13,16 @@ calibration_data.json
 .DS_Store
 .vscode/
 .idea/
+
+# backend (stays on server, not in git)
+app/
+requirements.txt
+run-backend.bat
+run-ngrok.bat
+Dockerfile
+.dockerignore
+DEPLOY.md
+README.md
+explore_signal.py
+test_images_script.py
+test images/
