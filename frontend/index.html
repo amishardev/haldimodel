@@ -528,12 +528,22 @@
 
     setLoading(true);
     try {
-      // NOTE: Do NOT add custom headers here (e.g. ngrok-skip-browser-warning).
-      // POST + FormData is a CORS "simple request" and skips the OPTIONS preflight.
-      // Adding ANY custom header forces a preflight, which ngrok free tier blocks.
+      // ngrok's free tier shows a browser "you are about to visit..."
+      // interstitial page to any request that looks like it came from a real
+      // browser (based on Sec-Fetch/User-Agent, NOT on preflight status).
+      // That interstitial page has no CORS headers, so the browser blocks the
+      // response and fetch() throws exactly "Failed to fetch" — with no other
+      // clue why. The ngrok-skip-browser-warning header is ngrok's own
+      // documented bypass for this. It does NOT break CORS: this backend's
+      // CORSMiddleware allows all headers (allow_headers=["*"]), so even if a
+      // preflight OPTIONS is triggered it succeeds — verified directly against
+      // this backend. Do not remove this header again without re-testing in
+      // an actual browser (curl does not reproduce the interstitial, since
+      // ngrok only shows it to browser-like User-Agents).
       const res = await fetch(API_BASE + "/analyze", {
         method: "POST",
         body: fd,
+        headers: { "ngrok-skip-browser-warning": "true" },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Analysis failed.");
