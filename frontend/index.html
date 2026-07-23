@@ -186,6 +186,47 @@
       </div>
     </div>
 
+    <!-- CALIBRATION WIZARD — teach the app your known samples -->
+    <div class="bg-white rounded-2xl ring-1 ring-black/5 px-5 py-4 mb-4">
+      <div class="flex items-center justify-between">
+        <div class="pr-3">
+          <div class="font-bold">Calibration wizard</div>
+          <div class="text-sm text-[color:var(--muted)]">
+            Teach the app a sample whose purity you already know.
+            <span id="cal-status" class="font-semibold text-[color:var(--ink)]"></span>
+          </div>
+        </div>
+        <button id="cal-toggle" type="button"
+          class="flex-none text-xs font-bold uppercase tracking-wide px-3 py-2 rounded-full ring-1 ring-black/10">Open</button>
+      </div>
+
+      <div id="cal-panel" class="hidden mt-4 space-y-3">
+        <p class="text-xs text-[color:var(--muted)]">
+          Load a BEFORE/AFTER pair of a sample with a <strong>known</strong> purity in
+          the two boxes above, enter that purity here, then press Add. The app measures
+          its browning_index and stores the pair. With 2 or more points it fits
+          <code>purity = slope x browning_index + intercept</code> and uses that instead
+          of the uncalibrated estimate.
+        </p>
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="text-sm">Known purity
+            <input id="cal-known" type="number" min="0" max="100" step="0.1" placeholder="e.g. 100"
+              class="ml-2 w-24 px-2 py-1 rounded-lg ring-1 ring-black/10 font-mono text-sm" />
+            <span class="text-[color:var(--muted)]">%</span>
+          </label>
+          <button id="cal-add" type="button"
+            class="bg-[color:var(--ink)] text-white text-sm font-bold px-4 py-2 rounded-full disabled:opacity-40">
+            Add this pair
+          </button>
+          <button id="cal-refresh" type="button"
+            class="text-xs font-semibold underline">Refresh status</button>
+        </div>
+        <p id="cal-msg" class="text-xs"></p>
+        <div id="cal-sep-warn" class="hidden text-xs bg-amber-50 ring-1 ring-amber-300 text-amber-900 rounded-xl p-2"></div>
+        <pre id="cal-points" class="text-[11px] bg-[color:var(--cream)] rounded-xl p-2 overflow-x-auto"></pre>
+      </div>
+    </div>
+
     <!-- Analyse button -->
     <button id="analyze-btn"
       class="w-full inline-flex items-center justify-center gap-2 bg-[color:var(--ink)] hover:bg-black disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-lg px-8 py-4 rounded-full shadow-sm transition">
@@ -316,7 +357,7 @@
       <!-- Raw signed numbers (ALWAYS shown) -->
       <div class="mt-5 grid grid-cols-2 gap-3 text-sm">
         <div class="bg-[color:var(--cream)] rounded-2xl p-3">
-          <div class="text-[color:var(--muted)] text-xs">reaction_strength · primary</div>
+          <div class="text-[color:var(--muted)] text-xs">browning_index · primary</div>
           <div id="reaction-strength" class="font-mono font-bold text-base">–</div>
         </div>
         <div class="bg-[color:var(--cream)] rounded-2xl p-3">
@@ -473,6 +514,94 @@
     });
   }
 
+  // ----------------------------------------------------------------------
+  // CALIBRATION WIZARD
+  // Runs /analyze on the currently-loaded pair to obtain its browning_index,
+  // then POSTs (browning_index, known_purity_percent) to /calibrate. It never
+  // invents the x-value: it always uses the same measurement path a normal
+  // analysis uses, so a calibration point is guaranteed to be on the exact
+  // scale the scoring uses.
+  // ----------------------------------------------------------------------
+  const calPanel = document.getElementById("cal-panel");
+  const calToggle = document.getElementById("cal-toggle");
+  const calMsg = document.getElementById("cal-msg");
+
+  calToggle.addEventListener("click", () => {
+    const open = calPanel.classList.toggle("hidden") === false;
+    calToggle.textContent = open ? "Close" : "Open";
+    if (open) refreshCalibration();
+  });
+  document.getElementById("cal-refresh").addEventListener("click", refreshCalibration);
+
+  async function refreshCalibration() {
+    try {
+      const r = await fetch(API_BASE + "/calibrate", {
+        headers: { "ngrok-skip-browser-warning": "true" },
+      });
+      const d = await r.json();
+      document.getElementById("cal-status").textContent = " " + (d.mode_label || "");
+      document.getElementById("cal-points").textContent =
+        JSON.stringify(d.points || [], null, 1) +
+        (d.fit ? `\n\nfit: purity = ${d.fit.slope.toFixed(2)} x browning_index + ${d.fit.intercept.toFixed(2)}`
+               : "\n\n(not enough points to fit yet)") +
+        (d.separation != null ? `\nseparation: ${d.separation}` : "");
+      const warn = document.getElementById("cal-sep-warn");
+      show("cal-sep-warn", !!d.separation_warning);
+      if (d.separation_warning) warn.textContent = d.separation_warning;
+    } catch (e) {
+      document.getElementById("cal-status").textContent = " (status unavailable)";
+    }
+  }
+
+  document.getElementById("cal-add").addEventListener("click", async () => {
+    const known = parseFloat(document.getElementById("cal-known").value);
+    calMsg.className = "text-xs";
+    if (!state.before.file || !state.after.file) {
+      calMsg.textContent = "Load a BEFORE and an AFTER photo above first.";
+      calMsg.className = "text-xs text-red-600"; return;
+    }
+    if (!Number.isFinite(known) || known < 0 || known > 100) {
+      calMsg.textContent = "Enter the known purity as a number from 0 to 100.";
+      calMsg.className = "text-xs text-red-600"; return;
+    }
+    calMsg.textContent = "Measuring this pair…";
+    try {
+      const fd = new FormData();
+      fd.append("before_image", state.before.file);
+      fd.append("after_image", state.after.file);
+      if (state.before.roi) fd.append("before_sample_roi", state.before.roi.join(","));
+      if (state.after.roi)  fd.append("after_sample_roi", state.after.roi.join(","));
+      const ar = await fetch(API_BASE + "/analyze", {
+        method: "POST", body: fd,
+        headers: { "ngrok-skip-browser-warning": "true" },
+      });
+      const ad = await ar.json();
+      if (!ar.ok) throw new Error(ad.detail || "Measurement failed.");
+      if (typeof ad.browning_index !== "number") {
+        throw new Error(ad.warning || "This pair could not be measured, so it "
+                                    + "cannot be used as a calibration point.");
+      }
+      const cr = await fetch(API_BASE + "/calibrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json",
+                   "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify({ browning_index: ad.browning_index,
+                               known_purity_percent: known }),
+      });
+      const cd = await cr.json();
+      if (!cr.ok) throw new Error(cd.detail || "Could not store the point.");
+      calMsg.textContent = `Added browning_index=${ad.browning_index.toFixed(4)} `
+                         + `at ${known}% — now ${cd.mode_label}.`;
+      calMsg.className = "text-xs text-emerald-700";
+      refreshCalibration();
+    } catch (e) {
+      calMsg.textContent = e.message || "Something went wrong.";
+      calMsg.className = "text-xs text-red-600";
+    }
+  });
+
+  refreshCalibration();
+
   setupZone("before");
   setupZone("after");
 
@@ -528,18 +657,12 @@
 
     setLoading(true);
     try {
-      // ngrok's free tier shows a browser "you are about to visit..."
-      // interstitial page to any request that looks like it came from a real
-      // browser (based on Sec-Fetch/User-Agent, NOT on preflight status).
-      // That interstitial page has no CORS headers, so the browser blocks the
-      // response and fetch() throws exactly "Failed to fetch" — with no other
-      // clue why. The ngrok-skip-browser-warning header is ngrok's own
-      // documented bypass for this. It does NOT break CORS: this backend's
-      // CORSMiddleware allows all headers (allow_headers=["*"]), so even if a
-      // preflight OPTIONS is triggered it succeeds — verified directly against
-      // this backend. Do not remove this header again without re-testing in
-      // an actual browser (curl does not reproduce the interstitial, since
-      // ngrok only shows it to browser-like User-Agents).
+      // NOTE: ngrok's free tier serves an interstitial "you are about to visit"
+      // HTML page to browser requests, which would break this fetch. The
+      // ngrok-skip-browser-warning header bypasses it. It is ignored by every
+      // other host (Cloudflare Tunnel, localhost, etc.), so it is always safe.
+      // Do NOT set Content-Type here — the browser must set the multipart
+      // boundary for FormData itself.
       const res = await fetch(API_BASE + "/analyze", {
         method: "POST",
         body: fd,
@@ -731,7 +854,7 @@
     if (d.gemma_note) document.getElementById("gemma-text").textContent = d.gemma_note;
 
     // --- raw signed numbers (always) --------------------------------------
-    document.getElementById("reaction-strength").textContent = fmt(d.reaction_strength);
+    document.getElementById("reaction-strength").textContent = fmt(d.browning_index);
     document.getElementById("before-yellow").textContent = fmt(d.before_yellow);
 
     // --- mode note: "calibrated (N points)" vs "uncalibrated heuristic" --
@@ -745,7 +868,7 @@
         ? `Score from ${d.calibration_mode_label} — fitted directly on real measured samples.`
         : `Score from the ${d.calibration_mode_label} (REACTION_REF guess) — add real samples via /calibrate to improve accuracy.`;
     } else {
-      modeTxt = "Index from the literature-anchored reaction-strength heuristic (not yet calibrated).";
+      modeTxt = "Uncalibrated — relative only. Use the calibration wizard to add known samples.";
     }
     document.getElementById("mode-note").textContent = modeTxt;
 
@@ -778,17 +901,30 @@
       ["paper_bbox after",   d.scene && d.scene.after.paper_bbox   ? JSON.stringify(d.scene.after.paper_bbox)   : "–"],
       ["box source (sample/paper)",
         d.scene ? `${d.scene.before.sample_source} / ${d.scene.before.paper_source}` : "–"],
-      ["— LAYER 2: math —", ""],
-      ["reaction_strength (PRIMARY)", fmt(d.reaction_strength)],
-      ["reaction_delta (signed)", fmt(d.reaction_delta)],
+      ["— LAYER 2: math (ratiometric) —", ""],
+      ["browning_index (PRIMARY)", fmt(d.browning_index)],
+      ["R_before = A_red/A_blue", fmt(g.R_before)],
+      ["R_after  = A_red/A_blue", fmt(g.R_after)],
+      ["A_red before / after", `${fmt(g.A_red_before)}  /  ${fmt(g.A_red_after)}`],
+      ["A_blue before / after", `${fmt(g.A_blue_before)}  /  ${fmt(g.A_blue_after)}`],
       ["before_yellow (dye check)", fmt(d.before_yellow)],
+      ["— guards —", ""],
+      ["pixels excluded (unusable)", g.excluded_frac_worst != null ? (g.excluded_frac_worst*100).toFixed(1)+"% (limit "+(g.max_saturated_frac*100).toFixed(0)+"%)" : "–"],
+      ["blue at sensor floor", (g.blue_floor_frac_before!=null&&g.blue_floor_frac_after!=null) ? (g.blue_floor_frac_before*100).toFixed(0)+"% / "+(g.blue_floor_frac_after*100).toFixed(0)+"%" : "–"],
+      ["paper brightness before/after", (g.paper_brightness_before!=null) ? `${g.paper_brightness_before} / ${g.paper_brightness_after}` : "–"],
+      ["paper difference", g.paper_diff != null ? (g.paper_diff*100).toFixed(1)+"% (tol "+(g.paper_tolerance*100).toFixed(0)+"%)" : "–"],
       ["after darkness (mean 0-255)", g.after_darkness != null ? g.after_darkness : "–"],
+      ["LEGACY absolute signals (unused)",
+        `lum_delta=${fmt(g.legacy_reaction_delta_luminance)}  blue_delta=${fmt(g.legacy_blue_delta)}`],
       ["purity_index", d.purity_index == null ? "— (no score)" : d.purity_index],
       ["mode", g.mode || "—"],
       ["calibration points used", g.calibration_points_used != null ? String(g.calibration_points_used) : "0"],
       ["calibration fit (slope/intercept)", g.calibration_fit
         ? `slope=${Number(g.calibration_fit.slope).toFixed(3)} intercept=${Number(g.calibration_fit.intercept).toFixed(3)}`
         : "– (heuristic mode)"],
+      ["calibration separation", g.calibration_separation != null
+        ? Number(g.calibration_separation).toFixed(4) + (g.calibration_poor_separation ? "  ** TOO CLOSE **" : "  (ok)")
+        : "–"],
       ["calibration points (raw)", g.calibration_points ? JSON.stringify(g.calibration_points) : "–"],
       ["— LAYER 3: confidence —", d.confidence || "–"],
       ["confidence score", d.confidence_score != null ? String(d.confidence_score) : "–"],
